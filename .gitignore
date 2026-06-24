@@ -1,0 +1,13 @@
+# Real, private health data — NEVER commit. The dashboard loads it locally from your device.
+migraines.txt
+migraines.json
+migraines-backup-*.json
+sleep.txt
+weather.txt
+drinkcontrol.csv
+DrinkControl*.csv
+*.csv
+
+# Synthetic sample-*.txt files ARE tracked — they don't match the patterns above.
+
+.DS_Store

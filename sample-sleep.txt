@@ -1,0 +1,10 @@
+# Sample sleep event-log (what the Log Sleep shortcut appends nightly).
+# date = wake date; hrs = asleep hours, awake = awake hours during the night.
+2026-06-17 | sleep | hrs=7.4 | awake=0.5 | bed=2026-06-16T23:05 | wake=2026-06-17T07:10
+2026-06-18 | sleep | hrs=6.1 | awake=0.9 | bed=2026-06-17T23:55 | wake=2026-06-18T06:40
+2026-06-19 | sleep | hrs=7.9 | awake=0.4 | bed=2026-06-18T22:40 | wake=2026-06-19T07:00
+2026-06-20 | sleep | hrs=5.2 | awake=1.2 | bed=2026-06-20T00:50 | wake=2026-06-20T06:30
+2026-06-21 | sleep | hrs=8.0 | awake=0.3 | bed=2026-06-20T22:30 | wake=2026-06-21T07:05
+2026-06-22 | sleep | hrs=6.8 | awake=0.6 | bed=2026-06-21T23:20 | wake=2026-06-22T06:50
+2026-06-23 | sleep | hrs=4.9 | awake=1.4 | bed=2026-06-23T01:10 | wake=2026-06-23T06:25
+2026-06-24 | sleep | hrs=5.5 | awake=1.1 | bed=2026-06-24T00:30 | wake=2026-06-24T06:40

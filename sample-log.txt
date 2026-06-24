@@ -1,0 +1,14 @@
+# Sample migraine event-log in the CURRENT schema (auraStart / auraEnd / migraineEnd).
+# Lists use ~ as the separator. Import alongside sample-sleep.txt + a DrinkControl CSV
+# to see the joins and "Likely factors". Multiple episodes so the factor logic has signal.
+2026-05-02T19:40 | auraStart | cycle=18 | wxHigh=19°C | wxLow=11°C | wxCond=Cloudy | wxPress=29.70 inHg | wxHum=72 | wxWind=8.1 mph | wxUV=2 | wxAQ=3 |
+2026-05-02T20:05 | auraEnd
+2026-05-02T23:10 | migraineEnd | prodrome=Yawning | aura=Blind spot | migraine=Headache~Nausea | sev=3 | triggers=Lack of sleep | treatment=Triptan~Lying down in dark | eff=2 |
+2026-05-16T18:20 | auraStart | cycle=20 | wxHigh=22°C | wxLow=13°C | wxCond=Sunny | wxPress=29.62 inHg | wxHum=64 | wxWind=6.4 mph | wxUV=5 | wxAQ=4 |
+2026-05-16T18:45 | auraEnd
+2026-05-16T21:30 | migraineEnd | aura=Zigzag lines | migraine=Sensitivity to light and sound~Headache | sev=4 | triggers=Stress~Lack of sleep | treatment=Triptan | eff=3 |
+2026-06-01T20:00 | auraStart | cycle=22 | wxHigh=24°C | wxLow=15°C | wxCond=Clear | wxPress=29.55 inHg | wxHum=58 | wxWind=4.0 mph | wxUV=6 | wxAQ=5 |
+2026-06-01T22:15 | migraineEnd | prodrome=Mood changes | migraine=Headache | sev=2 | triggers=Lack of sleep~Alcohol | treatment=Caffeine~Lying down in dark | eff=4 |
+2026-06-24T21:02 | auraStart | cycle=8 | wxHigh=34°C | wxLow=22°C | wxCond=Sunny | wxPress=30.044 inHg | wxHum=57 | wxWind=5.0 mph | wxUV=0 | wxAQ=4 |
+2026-06-24T21:03 | auraEnd
+2026-06-24T22:30 | migraineEnd | prodrome=Mood changes~Yawning | aura=Blind spot | migraine=Sensitivity to light and sound~Nausea | sev=1 | triggers=Bright lights | treatment=Lying down in dark~Caffeine | eff=3 |

@@ -1,0 +1,12 @@
+# Sample daily weather log (fake). One 'weather' line per day = the baseline the
+# dashboard compares migraine-onset conditions against. Import with sample-log.txt.
+2026-06-15T22:00 | weather | wxHigh=23°C | wxLow=13°C | wxCond=Cloudy | wxPress=30.01 inHg | wxHum=66 | wxWind=7.2 mph | wxUV=3 | wxAQ=3
+2026-06-16T22:00 | weather | wxHigh=24°C | wxLow=14°C | wxCond=Partly Cloudy | wxPress=29.98 inHg | wxHum=62 | wxWind=6.0 mph | wxUV=4 | wxAQ=3
+2026-06-17T22:00 | weather | wxHigh=25°C | wxLow=15°C | wxCond=Sunny | wxPress=30.05 inHg | wxHum=58 | wxWind=4.5 mph | wxUV=5 | wxAQ=2
+2026-06-18T22:00 | weather | wxHigh=26°C | wxLow=16°C | wxCond=Sunny | wxPress=30.02 inHg | wxHum=55 | wxWind=5.1 mph | wxUV=6 | wxAQ=3
+2026-06-19T22:00 | weather | wxHigh=27°C | wxLow=17°C | wxCond=Clear | wxPress=29.90 inHg | wxHum=60 | wxWind=6.8 mph | wxUV=6 | wxAQ=4
+2026-06-20T22:00 | weather | wxHigh=29°C | wxLow=19°C | wxCond=Clear | wxPress=29.82 inHg | wxHum=57 | wxWind=5.5 mph | wxUV=7 | wxAQ=4
+2026-06-21T22:00 | weather | wxHigh=31°C | wxLow=20°C | wxCond=Sunny | wxPress=29.95 inHg | wxHum=54 | wxWind=4.0 mph | wxUV=7 | wxAQ=4
+2026-06-22T22:00 | weather | wxHigh=32°C | wxLow=21°C | wxCond=Sunny | wxPress=30.00 inHg | wxHum=56 | wxWind=3.6 mph | wxUV=8 | wxAQ=5
+2026-06-23T22:00 | weather | wxHigh=33°C | wxLow=22°C | wxCond=Mostly Clear | wxPress=30.03 inHg | wxHum=59 | wxWind=3.9 mph | wxUV=2 | wxAQ=4
+2026-06-24T22:00 | weather | wxHigh=34°C | wxLow=22°C | wxCond=Mostly Clear | wxPress=30.049 inHg | wxHum=61 | wxWind=3.8 mph | wxUV=0 | wxAQ=4

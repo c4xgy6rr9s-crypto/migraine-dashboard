@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Migraine Log</title>
+<style>
+  :root{
+    --ink:#1d1b22;
+    --paper:#f6f3ee;
+    --card:#ffffff;
+    --line:#e2dcd2;
+    --muted:#6f6a76;
+    --aura:#7b5ea7;       /* aura purple */
+    --aura-soft:#efe9f6;
+    --warn:#c2683a;       /* terracotta for triggers */
+    --warn-soft:#f6ebe3;
+    --ok:#4a7a63;
+    --ok-soft:#e7f0eb;
+    --grid:#ece7df;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1040px;margin:0 auto;padding:32px 20px 80px}
+  header.masthead{
+    border-bottom:2px solid var(--ink);
+    padding-bottom:18px;margin-bottom:8px;
+    display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;
+  }
+  .title-block h1{font-size:40px;line-height:.95;margin:0;letter-spacing:-.5px;font-weight:600}
+  .title-block .sub{
+    font-family:ui-monospace,"SF Mono",Menlo,monospace;
+    font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-top:8px;
+  }
+  .controls{display:flex;gap:8px;flex-wrap:wrap}
+  button{
+    font-family:ui-monospace,"SF Mono",Menlo,monospace;
+    font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    border:1px solid var(--ink);background:var(--card);color:var(--ink);
+    padding:9px 13px;border-radius:2px;cursor:pointer;transition:.15s;
+  }
+  button:hover{background:var(--ink);color:var(--paper)}
+  button.primary{background:var(--aura);border-color:var(--aura);color:#fff}
+  button.primary:hover{background:#674e91}
+  button:focus-visible{outline:2px solid var(--aura);outline-offset:2px}
+  .loaded{font-family:ui-monospace,Menlo,monospace;font-size:10px;letter-spacing:.06em;color:var(--muted);margin:10px 0 0;display:flex;gap:14px;flex-wrap:wrap}
+  .loaded b{color:var(--ok);font-weight:600}
+  .loaded .miss{color:var(--muted);opacity:.7}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:26px 0 30px}
+  @media(max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:16px 16px 14px}
+  .stat .n{font-size:30px;font-weight:600;line-height:1;letter-spacing:-.5px}
+  .stat .l{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+  .stat .n .unit{font-size:14px;color:var(--muted);font-weight:400;margin-left:3px}
+  h2.sec{
+    font-size:13px;font-family:ui-monospace,"SF Mono",Menlo,monospace;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+    border-bottom:1px solid var(--line);padding-bottom:8px;margin:36px 0 18px;font-weight:400;
+  }
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:20px}
+  /* insights */
+  .conf{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;letter-spacing:.04em;color:var(--warn);margin:0 0 14px}
+  .insight{display:grid;grid-template-columns:26px 1fr 90px;gap:12px;align-items:center;padding:13px 0;border-bottom:1px solid var(--line)}
+  .insight:last-child{border-bottom:0}
+  .insight .ic{font-size:18px;text-align:center}
+  .insight .body .h{font-weight:600;font-size:15.5px}
+  .insight .body .d{font-size:13px;color:var(--muted);margin-top:2px}
+  .insight .meter{height:8px;background:var(--grid);border-radius:4px;overflow:hidden}
+  .insight .meter .fill{height:100%;background:var(--aura);border-radius:4px}
+  .insight.cyc .meter .fill{background:#4a7a63}
+  .insight.sleep .meter .fill{background:#5b80a8}
+  .insight.alc .meter .fill{background:var(--warn)}
+  .insight.trg .meter .fill{background:var(--aura)}
+  .insight.sex .meter .fill{background:#9a8aa8}
+  .insight.wx .meter .fill{background:#5b80a8}
+  .none{color:var(--muted);font-size:14px;padding:6px 0}
+  .chartbox{position:relative;height:230px}
+  svg{width:100%;height:100%;display:block;overflow:visible}
+  .axis{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:10px;fill:var(--muted)}
+  .gridline{stroke:var(--grid);stroke-width:1}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:760px){.two-col{grid-template-columns:1fr}}
+  .freqbar{display:flex;flex-direction:column;gap:9px}
+  .freqrow{display:grid;grid-template-columns:130px 1fr 34px;align-items:center;gap:10px;font-size:14px}
+  .freqrow .track{background:var(--grid);border-radius:2px;height:14px;overflow:hidden}
+  .freqrow .fill{height:100%;border-radius:2px}
+  .freqrow.sym .fill{background:var(--aura)}
+  .freqrow.trg .fill{background:var(--warn)}
+  .freqrow.cyc .fill{background:#4a7a63}
+  .freqrow.tx .fill{background:#3f6f7a}
+  .freqrow .cnt{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);text-align:right}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:400;border-bottom:1px solid var(--ink);padding:8px 9px;white-space:nowrap}
+  td{border-bottom:1px solid var(--line);padding:9px;vertical-align:top}
+  tr:hover td{background:var(--aura-soft)}
+  .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:10px;margin:1px 3px 1px 0;background:var(--aura-soft);color:var(--aura);white-space:nowrap}
+  .tag.trg{background:var(--warn-soft);color:var(--warn)}
+  .tag.tx{background:#e4eef0;color:#3f6f7a}
+  .dur{font-family:ui-monospace,monospace;font-size:12.5px;white-space:nowrap}
+  .num{font-family:ui-monospace,monospace;font-size:12.5px;white-space:nowrap;text-align:right}
+  .ongoing{color:var(--warn);font-weight:600}
+  .sev{font-family:ui-monospace,monospace;font-size:12px;font-weight:600}
+  .empty{text-align:center;padding:60px 20px;color:var(--muted)}
+  .empty h3{font-size:20px;color:var(--ink);margin:0 0 8px;font-weight:600}
+  .empty code{background:var(--aura-soft);padding:2px 6px;border-radius:3px;font-size:12px}
+  input[type=file]{display:none}
+  footer{margin-top:50px;padding-top:16px;border-top:1px solid var(--line);font-family:ui-monospace,monospace;font-size:10px;color:var(--muted);letter-spacing:.08em}
+  @media print{
+    body{background:#fff}
+    .controls,.no-print{display:none!important}
+    .panel,.stat{border-color:#ccc}
+    .wrap{max-width:none;padding:0}
+    tr:hover td{background:transparent}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="title-block">
+      <h1>Migraine Log</h1>
+      <div class="sub" id="rangeLabel">No data loaded</div>
+    </div>
+    <div class="controls no-print">
+      <button onclick="document.getElementById('importFile').click()">Load / Import</button>
+      <button onclick="exportData()">Export Backup</button>
+      <button class="primary" onclick="window.print()">Save as PDF</button>
+      <input type="file" id="importFile" multiple accept=".txt,.json,.csv,text/plain,text/csv,*/*" onchange="handleImport(event)">
+    </div>
+  </header>
+
+  <div id="loaded" class="loaded no-print"></div>
+
+  <div id="app"></div>
+
+  <footer>
+    Migraines, sleep, alcohol &amp; weather joined locally in your browser · Nothing is uploaded · Load <code style="font-family:inherit">migraines.txt</code>, the DrinkControl CSV, <code style="font-family:inherit">sleep.txt</code> &amp; <code style="font-family:inherit">weather.txt</code>
+  </footer>
+</div>
+
+<script>
+/* ===================== state ===================== */
+let EPISODES = [];        // parsed migraine episodes
+let ALCOHOL  = {};        // { 'yyyy-mm-dd': unitsThatDay }
+let SLEEP    = {};        // { 'yyyy-mm-dd': {hrs,awake,bed,wake} }   (date = wake date)
+let WEATHER  = {};        // { 'yyyy-mm-dd': {high,low,cond,press,hum,wind,uv,aq} }  daily baseline
+
+/* ===================== small helpers ===================== */
+const fmtDate = s => { if(!s) return "—"; const d=new Date(s); return d.toLocaleDateString(undefined,{month:"short",day:"numeric"}); };
+const fmtTime = s => { if(!s) return ""; const d=new Date(s); return d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); };
+const dayOf   = s => (s||"").slice(0,10);                    // 'yyyy-mm-ddThh:mm' -> 'yyyy-mm-dd'
+const num     = v => { if(v==null||v==="") return undefined; const n=parseFloat(v); return isFinite(n)?n:undefined; };
+const splitList = v => { if(v==null||v==="") return []; const sep=v.indexOf("~")>=0?"~":","; return v.split(sep).map(s=>s.trim()).filter(Boolean); };
+const mean = a => a.length? a.reduce((x,y)=>x+y,0)/a.length : null;
+const median = a => { if(!a.length) return null; const s=a.slice().sort((x,y)=>x-y); const m=s.length>>1; return s.length%2? s[m] : (s[m-1]+s[m])/2; };
+function addDays(dateStr,n){ // stays in local time — no UTC round-trip (avoids off-by-one)
+  const [y,m,d]=dateStr.split('-').map(Number); const dt=new Date(y,m-1,d+n);
+  return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'); }
+
+function durationMin(e){ if(!e.onset||!e.end) return null; return Math.round((new Date(e.end)-new Date(e.onset))/60000); }
+function durLabel(e){ const m=durationMin(e); if(m===null) return '<span class="ongoing">ongoing</span>'; const h=Math.floor(m/60),mm=m%60; return (h?h+"h ":"")+mm+"m"; }
+
+function cyclePhase(d){
+  if(d==null) return null;
+  if(d>=1&&d<=5)  return "menstrual";
+  if(d>=6&&d<=13) return "follicular";
+  if(d===14)      return "ovulation";
+  if(d>=15&&d<=28)return "luteal";
+  return "day "+d;
+}
+const PHASE_DAYS = {menstrual:5, follicular:8, ovulation:1, luteal:14}; // ~28-day expectation
+
+/* ===================== parsers ===================== */
+/* Migraine event log. Episodes span auraStart … migraineEnd. Supports the older
+   start/end shape too (sym/trg/tx/eff). Lists split on ~ (or , for old data). */
+function parseMigraineLog(text){
+  const eps=[]; let open=null;
+  const fieldsOf = parts => { const f={}; for(let i=2;i<parts.length;i++){ const eq=parts[i].indexOf("="); if(eq<0)continue; f[parts[i].slice(0,eq).trim()]=parts[i].slice(eq+1).trim(); } return f; };
+  const weatherOf = f => {
+    const w={high:num(f.wxHigh),low:num(f.wxLow),cond:f.wxCond,press:num(f.wxPress),hum:num(f.wxHum),wind:num(f.wxWind),uv:num(f.wxUV),aq:num(f.wxAQ)};
+    if(f.weather && !w.cond) w.cond=f.weather;          // old single-field weather
+    return Object.values(w).some(v=>v!=null&&v!=="")? w : null;
+  };
+  text.split(/\r?\n/).forEach(raw=>{
+    const line=raw.trim(); if(!line||line[0]==="#") return;
+    const parts=line.split("|").map(s=>s.trim());
+    const ts=parts[0], type=parts[1]; if(!ts||!type) return;
+    const f=fieldsOf(parts);
+    if(type==="auraStart"||type==="migraineStart"||type==="start"){
+      open={onset:ts,auraStart:type==="auraStart"?ts:null,auraEnd:null,end:null,
+            cycleDay:num(f.cycle), sex:num(f.sex), weather:weatherOf(f),
+            prodrome:[],aura:[],migraine:[],triggers:[],treatment:[],severity:undefined,effectiveness:undefined};
+      if(type==="start"){ // old shape carried symptoms/triggers up front
+        open.migraine=splitList(f.sym); open.triggers=splitList(f.trg); open.treatment=splitList(f.tx);
+      }
+      eps.push(open);
+    } else if(type==="auraEnd"){
+      if(open) open.auraEnd=ts;
+    } else if(type==="migraineEnd"||type==="end"){
+      const t=open; if(!t) return; t.end=ts;
+      const merge=(k,v)=>{ if(v&&v.length) t[k]=[...new Set(t[k].concat(v))]; };
+      merge("prodrome",splitList(f.prodrome));
+      merge("aura",splitList(f.aura));
+      merge("migraine",splitList(f.migraine||f.sym));
+      merge("triggers",splitList(f.triggers||f.trg));
+      merge("treatment",splitList(f.treatment||f.tx));
+      if(num(f.sev)!=null) t.severity=num(f.sev);
+      if(num(f.eff)!=null) t.effectiveness=num(f.eff);
+      if(num(f.sex)!=null && t.sex==null) t.sex=num(f.sex);
+      if(!t.weather){ const w=weatherOf(f); if(w) t.weather=w; }
+      open=null;
+    }
+  });
+  return eps;
+}
+
+/* DrinkControl CSV -> units per AccountedForDate (UK units, already summed per row). */
+function parseAlcoholCsv(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  const head=lines[0].split(";").map(s=>s.replace(/"/g,"").trim());
+  const di=head.indexOf("AccountedForDate"), ui=head.indexOf("TotalUnits(UK)");
+  const map={};
+  if(di<0||ui<0) return map;
+  for(let i=1;i<lines.length;i++){
+    const c=lines[i].split(";");
+    const date=(c[di]||"").replace(/"/g,"").trim().slice(0,10);
+    const u=parseFloat((c[ui]||"").replace(/"/g,"").trim());
+    if(date && isFinite(u)) map[date]=(map[date]||0)+u;
+  }
+  return map;
+}
+
+/* Daily weather event log -> per-day baseline keyed by date. Last reading of a day wins. */
+function parseWeatherLog(text){
+  const map={};
+  text.split(/\r?\n/).forEach(raw=>{
+    const line=raw.trim(); if(!line||line[0]==="#") return;
+    const parts=line.split("|").map(s=>s.trim());
+    if(parts[1]!=="weather") return;
+    const f={}; for(let i=2;i<parts.length;i++){ const eq=parts[i].indexOf("="); if(eq<0)continue; f[parts[i].slice(0,eq).trim()]=parts[i].slice(eq+1).trim(); }
+    map[dayOf(parts[0])]={high:num(f.wxHigh),low:num(f.wxLow),cond:f.wxCond,press:num(f.wxPress),hum:num(f.wxHum),wind:num(f.wxWind),uv:num(f.wxUV),aq:num(f.wxAQ)};
+  });
+  return map;
+}
+
+/* Sleep event log -> per-night record keyed by wake date. */
+function parseSleepLog(text){
+  const map={};
+  text.split(/\r?\n/).forEach(raw=>{
+    const line=raw.trim(); if(!line||line[0]==="#") return;
+    const parts=line.split("|").map(s=>s.trim());
+    if(parts[1]!=="sleep") return;
+    const f={}; for(let i=2;i<parts.length;i++){ const eq=parts[i].indexOf("="); if(eq<0)continue; f[parts[i].slice(0,eq).trim()]=parts[i].slice(eq+1).trim(); }
+    map[parts[0]]={hrs:num(f.hrs),awake:num(f.awake),bed:f.bed,wake:f.wake};
+  });
+  return map;
+}
+
+/* ===================== joins ===================== */
+// Alcohol units in the 7 days BEFORE onset (exclusive of onset day).
+function alcohol7(onsetDay){
+  if(!Object.keys(ALCOHOL).length) return null;
+  const start=addDays(onsetDay,-7), end=addDays(onsetDay,-1);
+  let s=0; for(const d in ALCOHOL){ if(d>=start&&d<=end) s+=ALCOHOL[d]; } return s;
+}
+// Sleep the night before the migraine day (wake date == onset day).
+function sleepPrev(onsetDay){ return SLEEP[onsetDay]||null; }
+function sleep7avg(onsetDay){
+  const start=addDays(onsetDay,-6), vals=[];
+  for(const d in SLEEP){ if(d>=start&&d<=onsetDay && SLEEP[d].hrs!=null) vals.push(SLEEP[d].hrs); }
+  return vals.length? mean(vals) : null;
+}
+
+/* ===================== insights (most-likely factors) ===================== */
+function computeInsights(){
+  const out=[]; const n=EPISODES.length;
+  if(!n) return out;
+
+  // --- cycle phase, base-rate corrected ---
+  const withCycle=EPISODES.filter(e=>e.cycleDay!=null);
+  if(withCycle.length>=2){
+    const cnt={}; withCycle.forEach(e=>{ const p=cyclePhase(e.cycleDay); if(PHASE_DAYS[p]) cnt[p]=(cnt[p]||0)+1; });
+    let best=null;
+    for(const p in cnt){
+      const obs=cnt[p]/withCycle.length, exp=PHASE_DAYS[p]/28, lift=obs/exp;
+      if(!best||lift>best.lift) best={p,lift,c:cnt[p]};
+    }
+    if(best && best.lift>1.3){
+      out.push({cls:"cyc",ic:"🩸",h:`Cycle: ${best.p} phase`,
+        d:`${best.c} of ${withCycle.length} migraines here — ~${best.lift.toFixed(1)}× more than chance.`,
+        strength:Math.min(1,(best.lift-1)/2)});
+    }
+  }
+
+  // --- sleep the night before vs your usual ---
+  const allNights=Object.values(SLEEP).map(s=>s.hrs).filter(v=>v!=null);
+  const eveHrs=EPISODES.map(e=>{const s=sleepPrev(dayOf(e.onset));return s?s.hrs:null;}).filter(v=>v!=null);
+  if(allNights.length>=3 && eveHrs.length){
+    const base=median(allNights), avg=mean(eveHrs), delta=base-avg;
+    if(delta>0.4){
+      out.push({cls:"sleep",ic:"😴",h:"Sleep: short the night before",
+        d:`Avg ${avg.toFixed(1)}h before a migraine vs your usual ${base.toFixed(1)}h.`,
+        strength:Math.min(1,delta/3)});
+    }
+  }
+
+  // --- alcohol in the prior week vs typical ---
+  const alcDays=Object.keys(ALCOHOL);
+  if(alcDays.length>=7){
+    const lo=alcDays.reduce((a,b)=>a<b?a:b), hi=alcDays.reduce((a,b)=>a>b?a:b);
+    const weeks=Math.max(1,(new Date(hi)-new Date(lo))/6048e5);
+    const total=Object.values(ALCOHOL).reduce((a,b)=>a+b,0);
+    const typical=total/weeks;
+    const mig=EPISODES.map(e=>alcohol7(dayOf(e.onset))).filter(v=>v!=null);
+    if(mig.length){
+      const avg=mean(mig);
+      if(avg>typical*1.15 && avg>1){
+        out.push({cls:"alc",ic:"🍷",h:"Alcohol: raised in the prior week",
+          d:`~${avg.toFixed(0)} units in the week before migraines vs your typical ~${typical.toFixed(0)}/week.`,
+          strength:Math.min(1,(avg/typical-1))});
+      }
+    }
+  }
+
+  // --- weather vs your daily baseline (level comparison, z-scored) ---
+  const wxDays=Object.values(WEATHER);
+  if(wxDays.length>=7){
+    const getEp=(e,k)=>(e.weather&&e.weather[k]!=null)?e.weather[k]:(WEATHER[dayOf(e.onset)]?WEATHER[dayOf(e.onset)][k]:undefined);
+    const METRICS=[
+      {k:'press',u:' inHg',lo:'lower pressure',hi:'higher pressure',dp:2},
+      {k:'high', u:'°',    lo:'cooler days',   hi:'hotter days',    dp:0},
+      {k:'hum',  u:'%',    lo:'drier air',     hi:'more humid',     dp:0},
+      {k:'uv',   u:'',     lo:'lower UV',      hi:'higher UV',      dp:0},
+      {k:'aq',   u:'',     lo:'cleaner air',   hi:'worse air quality',dp:0},
+    ];
+    const cand=[];
+    METRICS.forEach(m=>{
+      const base=wxDays.map(d=>d[m.k]).filter(v=>v!=null);
+      const mig=EPISODES.map(e=>getEp(e,m.k)).filter(v=>v!=null);
+      if(base.length<7||mig.length<3) return;
+      const bMean=mean(base), bSD=Math.sqrt(mean(base.map(v=>(v-bMean)**2)));
+      if(!bSD) return;
+      const mMean=mean(mig), z=(mMean-bMean)/bSD;
+      if(Math.abs(z)>=0.7) cand.push({m,z,mMean,bMean,bSD});
+    });
+    cand.sort((a,b)=>Math.abs(b.z)-Math.abs(a.z));
+    cand.slice(0,2).forEach(c=>{
+      const f=v=>v.toFixed(c.m.dp);
+      out.push({cls:"wx",ic:"🌡",h:`Weather: ${c.z<0?c.m.lo:c.m.hi}`,
+        d:`Avg ${f(c.mMean)}${c.m.u} at onset vs your typical ${f(c.bMean)}${c.m.u} (±${f(c.bSD)}).`,
+        strength:Math.min(1,Math.abs(c.z)/2)});
+    });
+  }
+
+  // --- sex in the prior 2 days (descriptive: no non-migraine baseline) ---
+  const sexEps=EPISODES.filter(e=>e.sex!=null);
+  if(sexEps.length>=3){
+    const yes=sexEps.filter(e=>e.sex===1).length;
+    out.push({cls:"sex",ic:"🛏",h:"Sex in the prior 2 days",
+      d:`Present before ${yes} of ${sexEps.length} migraines — descriptive only (not yet logged on non-migraine days to compare).`,
+      strength:0.04});
+  }
+
+  // --- self-reported triggers ---
+  const tc={}; EPISODES.forEach(e=>(e.triggers||[]).forEach(t=>tc[t]=(tc[t]||0)+1));
+  const tt=Object.entries(tc).sort((a,b)=>b[1]-a[1]);
+  if(tt.length){
+    out.push({cls:"trg",ic:"📋",h:"Your noted triggers",
+      d:tt.slice(0,4).map(([t,c])=>`${t}${c>1?` ×${c}`:""}`).join(" · "),
+      strength:Math.min(1,tt[0][1]/Math.max(3,n))});
+  }
+
+  return out.sort((a,b)=>b.strength-a.strength);
+}
+
+/* ===================== load / render ===================== */
+function load(){ EPISODES.sort((a,b)=>new Date(a.onset)-new Date(b.onset)); render(); }
+
+function render(){
+  renderLoaded();
+  const app=document.getElementById('app');
+  if(!EPISODES.length){
+    app.innerHTML=`<div class="empty">
+      <h3>No migraines loaded</h3>
+      <p>Load <code>migraines.txt</code> (and your <code>DrinkControl.csv</code> + <code>sleep.txt</code>)
+      to see likely factors and history.</p></div>`;
+    document.getElementById('rangeLabel').textContent="No data loaded";
+    return;
+  }
+  const n=EPISODES.length;
+  const durs=EPISODES.map(durationMin).filter(x=>x!=null);
+  const avgDur=durs.length?Math.round(mean(durs)):0;
+  const sevs=EPISODES.map(e=>e.severity).filter(v=>v!=null);
+  const avgSev=sevs.length?mean(sevs).toFixed(1):null;
+  const first=EPISODES[0].onset, last=EPISODES[n-1].onset;
+  const spanDays=Math.max(1,(new Date(last)-new Date(first))/864e5);
+  let freqVal,freqLbl;
+  if(spanDays>=30){ freqVal=(n/spanDays*30).toFixed(1)+'<span class="unit">/mo</span>'; freqLbl='Frequency'; }
+  else{ freqVal=n; freqLbl=`In ${Math.round(spanDays)} day${Math.round(spanDays)===1?'':'s'} so far`; }
+  document.getElementById('rangeLabel').textContent=`${n} episode${n===1?'':'s'} · ${fmtDate(first)} – ${fmtDate(last)}`;
+
+  const ins=computeInsights();
+  const insHtml = ins.length
+    ? ins.map(i=>`<div class="insight ${i.cls}"><div class="ic">${i.ic}</div>
+        <div class="body"><div class="h">${i.h}</div><div class="d">${i.d}</div></div>
+        <div class="meter"><div class="fill" style="width:${Math.round(i.strength*100)}%"></div></div></div>`).join('')
+    : `<div class="none">Not enough joined data yet — load sleep and alcohol files, and log a few more episodes.</div>`;
+  const conf = n<5 ? `<div class="conf">⚠ Based on ${n} episode${n===1?'':'s'} — treat these as tentative until you have ~8–10.</div>` : '';
+
+  // symptom + trigger frequency (all phases combined for symptoms)
+  const symC={},trgC={},txC={},phaseC={};
+  EPISODES.forEach(e=>{
+    [...(e.prodrome||[]),...(e.aura||[]),...(e.migraine||[])].forEach(s=>symC[s]=(symC[s]||0)+1);
+    (e.triggers||[]).forEach(t=>trgC[t]=(trgC[t]||0)+1);
+    (e.treatment||[]).forEach(t=>txC[t]=(txC[t]||0)+1);
+    const p=e.cycleDay!=null?cyclePhase(e.cycleDay):null; if(p) phaseC[p]=(phaseC[p]||0)+1;
+  });
+  const top=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]);
+
+  app.innerHTML=`
+    <section class="stats">
+      <div class="stat"><div class="n">${n}</div><div class="l">Episodes logged</div></div>
+      <div class="stat"><div class="n">${freqVal}</div><div class="l">${freqLbl}</div></div>
+      <div class="stat"><div class="n">${Math.floor(avgDur/60)?Math.floor(avgDur/60)+'h ':''}${avgDur%60}<span class="unit">m</span></div><div class="l">Avg duration</div></div>
+      <div class="stat"><div class="n">${avgSev!=null?avgSev+'<span class="unit">/5</span>':'—'}</div><div class="l">Avg severity</div></div>
+    </section>
+
+    <h2 class="sec">Likely factors</h2>
+    ${conf}
+    <div class="panel">${insHtml}</div>
+
+    <h2 class="sec">Episodes over time</h2>
+    <div class="panel"><div class="chartbox" id="timeline"></div></div>
+
+    <div class="two-col">
+      <div><h2 class="sec">Symptoms</h2><div class="panel"><div class="freqbar">${barRows(top(symC),n,'sym')}</div></div></div>
+      <div><h2 class="sec">Triggers</h2><div class="panel"><div class="freqbar">${barRows(top(trgC),n,'trg')}</div></div></div>
+    </div>
+    <div class="two-col">
+      <div><h2 class="sec">Cycle phase</h2><div class="panel"><div class="freqbar">${barRows(top(phaseC),n,'cyc')}</div></div></div>
+      <div><h2 class="sec">Treatments used</h2><div class="panel"><div class="freqbar">${barRows(top(txC),n,'tx')}</div></div></div>
+    </div>
+
+    <h2 class="sec">History</h2>
+    <div class="panel" style="padding:0;overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Onset</th><th>Dur.</th><th>Sev</th><th>Phase</th>
+          <th>Symptoms</th><th>Triggers</th><th>Treatment</th><th>Relief</th>
+          <th>Sleep</th><th>Units 7d</th><th>Sex 2d</th><th>Weather</th>
+        </tr></thead>
+        <tbody>${EPISODES.slice().reverse().map(rowHtml).join('')}</tbody>
+      </table>
+    </div>`;
+  drawTimeline();
+}
+
+function renderLoaded(){
+  const el=document.getElementById('loaded'); if(!el) return;
+  const a=Object.keys(ALCOHOL).length, s=Object.keys(SLEEP).length, w=Object.keys(WEATHER).length;
+  el.innerHTML=
+    `<span>${EPISODES.length?'<b>migraines</b>':'<span class="miss">migraines —</span>'} ${EPISODES.length||''}</span>`+
+    `<span>${a?'<b>alcohol</b>':'<span class="miss">alcohol —</span>'} ${a?a+' days':''}</span>`+
+    `<span>${s?'<b>sleep</b>':'<span class="miss">sleep —</span>'} ${s?s+' nights':''}</span>`+
+    `<span>${w?'<b>weather</b>':'<span class="miss">weather —</span>'} ${w?w+' days':''}</span>`;
+}
+
+function barRows(entries,total,cls){
+  if(!entries.length) return '<div style="color:var(--muted);font-size:13px">None recorded</div>';
+  const max=entries[0][1];
+  return entries.map(([name,c])=>`<div class="freqrow ${cls}">
+    <div>${name}</div>
+    <div class="track"><div class="fill" style="width:${Math.round(c/max*100)}%"></div></div>
+    <div class="cnt">${c}</div></div>`).join('');
+}
+
+function rowHtml(e){
+  const od=dayOf(e.onset);
+  const syms=[...(e.prodrome||[]),...(e.aura||[]),...(e.migraine||[])].map(s=>`<span class="tag">${s}</span>`).join('')||'—';
+  const trgs=(e.triggers||[]).map(t=>`<span class="tag trg">${t}</span>`).join('')||'—';
+  const txs=(e.treatment||[]).map(t=>`<span class="tag tx">${t}</span>`).join('')||'—';
+  const relief=e.effectiveness!=null?'★'.repeat(e.effectiveness)+'<span style="color:var(--line)">'+'★'.repeat(Math.max(0,5-e.effectiveness))+'</span>':'—';
+  const sl=sleepPrev(od); const slTxt=sl&&sl.hrs!=null?`${sl.hrs}h${sl.awake!=null?` <span style="color:var(--muted)">+${sl.awake}</span>`:''}`:'—';
+  const a7=alcohol7(od); const a7Txt=a7!=null?a7.toFixed(1):'—';
+  const w=e.weather; const wTxt=w?`${w.cond||''}${w.high!=null?` ${w.high}°`:''}${w.press!=null?` · ${w.press}`:''}`:'—';
+  const ph=e.cycleDay!=null?cyclePhase(e.cycleDay):null;
+  return `<tr>
+    <td>${fmtDate(e.onset)}</td>
+    <td>${fmtTime(e.onset)}</td>
+    <td class="dur">${durLabel(e)}</td>
+    <td class="sev">${e.severity!=null?e.severity:'—'}</td>
+    <td>${ph?ph+(e.cycleDay!=null?` <span style="color:var(--muted)">d${e.cycleDay}</span>`:''):'—'}</td>
+    <td>${syms}</td><td>${trgs}</td><td>${txs}</td>
+    <td class="dur" style="color:var(--ok)">${relief}</td>
+    <td class="num">${slTxt}</td>
+    <td class="num">${a7Txt}</td>
+    <td class="num">${e.sex!=null?(e.sex?'✓':'–'):'—'}</td>
+    <td style="font-size:12px;color:var(--muted)">${wTxt}</td>
+  </tr>`;
+}
+
+function drawTimeline(){
+  const box=document.getElementById('timeline'); if(!box) return;
+  const W=box.clientWidth,H=box.clientHeight,pad={l:38,r:12,t:14,b:26};
+  const xs=EPISODES.map(e=>new Date(e.onset).getTime());
+  const minX=Math.min(...xs),maxX=Math.max(...xs)||minX+1;
+  const durs=EPISODES.map(e=>durationMin(e)||0);
+  const maxD=Math.max(60,...durs);
+  const px=t=>pad.l+(t-minX)/((maxX-minX)||1)*(W-pad.l-pad.r);
+  const py=d=>H-pad.b-(d/maxD)*(H-pad.t-pad.b);
+  let g='';
+  for(let h=0;h<=Math.ceil(maxD/60);h++){ const y=py(h*60);
+    g+=`<line class="gridline" x1="${pad.l}" y1="${y}" x2="${W-pad.r}" y2="${y}"/>`;
+    g+=`<text class="axis" x="${pad.l-6}" y="${y+3}" text-anchor="end">${h}h</text>`; }
+  [minX,(minX+maxX)/2,maxX].forEach(t=>{ g+=`<text class="axis" x="${px(t)}" y="${H-8}" text-anchor="middle">${fmtDate(new Date(t).toISOString())}</text>`; });
+  let path=EPISODES.map((e,i)=>`${i?'L':'M'}${px(xs[i])},${py(durs[i])}`).join(' ');
+  g+=`<path d="${path}" fill="none" stroke="var(--aura)" stroke-width="1" opacity=".35"/>`;
+  EPISODES.forEach((e,i)=>{ const ongoing=durationMin(e)===null;
+    g+=`<circle cx="${px(xs[i])}" cy="${py(durs[i])}" r="5" fill="${ongoing?'#fff':'var(--aura)'}" stroke="var(--aura)" stroke-width="1.5">
+        <title>${fmtDate(e.onset)} · ${durLabel(e).replace(/<[^>]+>/g,'')}</title></circle>`; });
+  box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${g}</svg>`;
+}
+
+/* ===================== import / export / cache ===================== */
+const CK='migraineLog.v2';
+function cacheAll(){
+  try{ localStorage.setItem(CK,JSON.stringify({EPISODES,ALCOHOL,SLEEP,WEATHER,savedAt:new Date().toISOString()})); }catch(e){}
+}
+function routeText(text){
+  const t=(text||'').trim(); if(!t) return null;
+  const first=t.split(/\r?\n/).find(l=>l.trim())||'';
+  if(/AccountedForDate/i.test(first)||/TotalUnits\(UK\)/i.test(first)){ ALCOHOL=parseAlcoholCsv(t); return 'alcohol'; }
+  const types=t.split(/\r?\n/).map(l=>{const p=l.split('|'); return p[1]?p[1].trim():'';});
+  if(types.includes('sleep')){ SLEEP=parseSleepLog(t); return 'sleep'; }
+  // migraine first — its auraStart lines also carry wx fields, so check event types before 'weather'
+  if(['auraStart','migraineStart','migraineEnd','start','end'].some(x=>types.includes(x))){ EPISODES=parseMigraineLog(t); return 'migraines'; }
+  if(types.includes('weather')){ WEATHER=parseWeatherLog(t); return 'weather'; }
+  if(t[0]==='['){ try{ EPISODES=normalizeJson(JSON.parse(t)); return 'migraines'; }catch(e){} }
+  EPISODES=parseMigraineLog(t); return 'migraines';
+}
+function normalizeJson(arr){ // accept an exported backup
+  return (arr||[]).map(e=>({onset:e.onset||e.start, auraStart:e.auraStart||null, auraEnd:e.auraEnd||null, end:e.end,
+    cycleDay:e.cycleDay, weather:e.weather||null, prodrome:e.prodrome||[], aura:e.aura||[],
+    migraine:e.migraine||e.symptoms||[], triggers:e.triggers||[], treatment:e.treatment||e.treatments||[],
+    severity:e.severity, effectiveness:e.effectiveness}));
+}
+function handleImport(ev){
+  const files=[...ev.target.files]; if(!files.length) return;
+  let done=0;
+  const finish=()=>{ if(++done===files.length){ load(); cacheAll(); } };
+  files.forEach(f=>{
+    const r=new FileReader();
+    r.onload =()=>{ try{ routeText(r.result); }catch(e){} finish(); };
+    r.onerror=finish;
+    r.readAsText(f);
+  });
+  ev.target.value='';
+}
+function exportData(){
+  const blob=new Blob([JSON.stringify(EPISODES,null,2)],{type:"application/json"});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='migraines-backup-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+}
+
+window.addEventListener('resize',()=>{ if(EPISODES.length) drawTimeline(); });
+
+(function restore(){
+  let c=null; try{ c=localStorage.getItem(CK); }catch(e){}
+  if(c){ try{ const o=JSON.parse(c); EPISODES=o.EPISODES||[]; ALCOHOL=o.ALCOHOL||{}; SLEEP=o.SLEEP||{}; WEATHER=o.WEATHER||{}; }catch(e){} }
+  load();
+})();
+</script>
+</body>
+</html>

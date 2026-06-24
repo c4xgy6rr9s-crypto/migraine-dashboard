@@ -1,0 +1,6 @@
+[
+  {"start":"2026-06-24T03:34","end":"2026-06-24T06:10","symptoms":["Sound sensitivity","Headache","Nausea"],"triggers":["Dehydration","Bright lights"],"treatments":["Ibuprofen","Cold pack"],"effectiveness":4,"cycleDay":3,"weather":"Drizzle"},
+  {"start":"2026-06-26T14:00","end":"2026-06-26T15:20","symptoms":["Visual aura","Light sensitivity"],"triggers":["Bright lights"],"treatments":["Lying down","Dark room"],"effectiveness":3,"cycleDay":5,"weather":"Clear"},
+  {"start":"2026-07-02T08:15","end":"2026-07-02T12:40","symptoms":["Headache","Nausea","Irritability"],"triggers":["Sleep schedule","Dehydration"],"treatments":["Triptan"],"effectiveness":5,"cycleDay":11,"weather":"Low pressure"},
+  {"start":"2026-07-09T19:30","end":"2026-07-09T20:50","symptoms":["Visual aura","Sound sensitivity"],"triggers":["Stress"],"treatments":["Hot bath","Lying down"],"effectiveness":2,"cycleDay":18,"weather":"Clear"}
+]
