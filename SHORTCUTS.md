@@ -1,64 +1,115 @@
 # iOS Shortcuts spec
 
-These shortcuts are built in the iOS Shortcuts app (not in this repo). This file documents what they do so the dashboard's expected data format stays in sync. If you rebuild them, match the JSON output exactly.
+The capture side is built in the iOS Shortcuts app (not in this repo). The Shortcuts append plain-text **event logs** to iCloud Drive; the dashboard reads them and joins them by date. **The log line formats below are the contract** — if you rebuild a shortcut, match the line format exactly and the dashboard keeps working.
 
-## Shared file
+> Status note: the line formats here are verified against real exports. The per-shortcut *build steps* for the migraine and weather shortcuts are described at the approach level — the exact internal wiring (especially how the weather block and `sex` are obtained) lives on the phone. Correct anything that doesn't match how you actually built them.
 
-- Location: iCloud Drive → `Shortcuts/migraines.txt`
-- Format: a single flat JSON array of episode objects (see `CLAUDE.md` for the shape).
-- Extension is `.txt` because Shortcuts' "Save File" appends `.txt` to text content; the contents are JSON. The dashboard reads it regardless.
-- Only one episode is "open" (`"end":null`) at a time.
+## Files (all in iCloud Drive)
 
-## Format: an append-only event log
+| File | Written by | One line per |
+|------|-----------|--------------|
+| `migraines.txt` | Start/End migraine shortcuts | episode event (`auraStart` / `auraEnd` / `migraineEnd`) |
+| `weather.txt` | daily weather automation | day |
+| `sleep.txt` | Log Sleep automation | night |
+| `drinkcontrol.csv` | DrinkControl app export (not a shortcut) | drink |
 
-Each shortcut **appends one plain line** per event. No JSON brackets, no quotes, no find/replace inside existing text. The dashboard pairs each `start` with the next `end` and builds the JSON on import (`parseEventLog` in `index.html`).
+## The shared append recipe
 
-Line shape — pipe-separated fields, first two are timestamp + event type, the rest are `key=value`:
+Shortcuts has no native "append a line" action, so every logging shortcut ends with:
+
+1. **Text** — the line to add (built per shortcut below).
+2. **Get File** the target `.txt` in iCloud Drive, *Error If Not Found OFF*.
+3. **Text** — the file variable, a literal newline (press Return), then the new-line variable:
+   ```
+   [FileContents]
+   [NewLine]
+   ```
+   This produces `file + newline + line`. On the first-ever run the file is empty, so you get one leading blank line — **the dashboard ignores blank lines**, so no conditional is needed.
+4. **Save File** to the same path, *Overwrite ON*, *Ask Where to Save OFF*.
+
+**Lists use `~` as the separator** (e.g. `migraine=Sensitivity to light and sound~Nausea`). Build them with **Choose from List (Select Multiple)** → **Combine Text** with `~`. A separator that isn't a comma or space means symptom/treatment names can contain anything. An empty pick yields an empty value (`triggers=`), which is fine. Because there are no quotes anywhere, Smart Punctuation is harmless.
+
+---
+
+## Migraine log — `migraines.txt`
+
+An episode spans **`auraStart` … `migraineEnd`** (migraines always begin with `auraStart`), with an optional `auraEnd` between. Verified format:
 
 ```
-2026-07-09T19:30 | start | cycle=18 | wx=Clear | sym=Visual aura, Light sensitivity
-2026-07-09T20:50 | end | trg=Stress | tx=Hot bath, Lying down | eff=2
+2026-06-24T21:02 | auraStart | cycle=8 | sex=1 | wxHigh=34°C | wxLow=22°C | wxCond=Sunny | wxPress=30.044 inHg | wxHum=57 | wxWind=5.037 mph | wxUV=0 | wxAQ=4
+2026-06-24T21:03 | auraEnd
+2026-06-24T22:30 | migraineEnd | prodrome=Mood changes~Yawning | aura=Blind spot | migraine=Sensitivity to light and sound~Nausea | sev=1 | triggers=Lack of sleep | treatment=Lying down in dark~Caffeine | eff=3
 ```
 
-Keys: `cycle` (bare int), `wx` (string), `sym`/`trg`/`tx` (comma-separated lists), `eff` (bare int 1–5). All optional; omit a key and the field is just empty. The parser trims everything and is case-insensitive on keys and the `start`/`end` type, so spacing doesn't matter. A `start` with no following `end` shows as **ongoing**.
+Fields, by event:
 
-Why this is easier than the old JSON-text approach: there's nothing to match exactly. Smart Punctuation no longer breaks anything (no quotes to curl), and you never edit existing file content — you only add a line.
+| Event | Fields |
+|-------|--------|
+| `auraStart` | `cycle` (bare int, day of cycle), `sex` (`1`/`0` = had sex in last 2 days), weather block: `wxHigh` `wxLow` `wxCond` `wxPress` `wxHum` `wxWind` `wxUV` `wxAQ` (units like `°C`/`inHg`/`mph` may stay in the value) |
+| `auraEnd` | *(none — just the timestamp)* |
+| `migraineEnd` | `prodrome` `aura` `migraine` (symptom lists), `sev` (1–5), `triggers` (list), `treatment` (list), `eff` (relief 1–5) |
 
-### The one append pattern (used by both shortcuts)
+The dashboard pairs the events into one episode, takes onset = `auraStart` time, and merges `migraineEnd` detail in.
 
-Shortcuts has no "append line" action, so:
-1. **Text** action = the new line (built with Replace/Combine, see below).
-2. **Get File** `migraines.txt` in iCloud Drive, *Error if Not Found OFF*.
-3. **If** [file] *has any value*: **Combine Text** with [file], [new line] using **New Lines** as separator → so the new line lands on its own row. **Otherwise**: just the new line.
-4. **Save File** `migraines.txt`, Overwrite ON, Ask Where to Save OFF.
+### Start Migraine (auraStart) — approach
+1. Current date → format `yyyy-MM-dd'T'HH:mm`.
+2. `cycle` from Health (days since last period start).
+3. `sex` — your 1/0 flag (e.g. a Yes/No menu → `1`/`0`).
+4. Weather block — Get Current Weather → Get Details for each metric (high, low, condition, pressure, humidity, wind, UV, air quality).
+5. (Optional) any symptoms you pick at onset.
+6. Build the `auraStart` line and **append** (recipe above).
+7. Optionally schedule the reminder that launches End.
 
-Lists (`sym`/`trg`/`tx`) come from **Choose from List (Select Multiple)** → **Combine Text** with `, ` (comma-space) as the separator. An empty pick yields an empty value, which is fine (`sym=`).
+### End Migraine (migraineEnd) — approach
+1. Current date → format.
+2. **Choose from List (Select Multiple)** → **Combine Text `~`** for: `prodrome`, `aura`, `migraine`, `triggers`, `treatment`.
+3. **Choose from Menu** → `sev` (1–5) and `eff` (1–5).
+4. Build the `migraineEnd` line and **append**.
 
-## Start Migraine
+`auraEnd` is just a timestamped line appended when the aura ends.
 
-Home Screen button:
-1. Current date → format `yyyy-MM-dd'T'HH:mm` → StartISO.
-2. Pull cycle day from Health (days since last period start) → CycleDay. (Sleep and alcohol Health pulls were tried and dropped.)
-3. Get Current Weather → condition → WeatherCond.
-4. (Optional) Choose from List for symptoms → Combine Text with `, ` → SymJoined.
-5. Build the line text:
-   `<StartISO> | start | cycle=<CycleDay> | wx=<WeatherCond> | sym=<SymJoined>`
-6. Append it (the pattern above).
-7. Adjust Date +60 min → Add Reminder "Check aura" with that alert. Reminder notes contain `shortcuts://run-shortcut?name=End%20Migraine` to launch End.
+---
 
-## End Migraine
+## Weather log — `weather.txt`
 
-Launched from the reminder link (or pinned):
-1. Current date → format → EndISO.
-2. Choose from List (Select Multiple) → Combine Text with `, ` for each:
-   symptoms → SymJoined, triggers → TrgJoined, **treatments → TxJoined**.
-3. Choose from Menu 1–5 → Effectiveness (bare number).
-4. Build the line text:
-   `<EndISO> | end | sym=<SymJoined> | trg=<TrgJoined> | tx=<TxJoined> | eff=<Effectiveness>`
-5. Append it (same pattern).
+One line per day (a daily automation), same weather block as `auraStart`. Verified format:
 
-`end` fields merge into the open episode: list values (`sym`/`trg`/`tx`) are **unioned** with whatever Start recorded (deduped), and `cycle`/`wx`/`eff` overwrite if present. So treatments only need to be asked at End — that's where the new treatment questions live.
+```
+2026-06-24T22:26 | weather | wxHigh=34°C | wxLow=22°C | wxCond=Mostly Clear | wxPress=30.049 inHg | wxHum=61 | wxWind=3.8 mph | wxUV=0 | wxAQ=4
+```
 
-## Planned: free-text "Other…" entry
+This is the **baseline** the dashboard compares migraine-onset weather against (it z-scores pressure, temp, humidity, UV and air quality at onset vs. typical days). Build: a time-of-day **Automation** → Get Current Weather → Get Details → build the `weather` line → **append** to `weather.txt`. The dashboard keys by date and keeps the last reading of each day.
 
-Pattern: present fixed Choose-from-List items, then an Ask for Input text prompt for extras; join the typed extras to the picked items with the same `, ` separator before building the line. Guard the case where nothing was picked (avoid a leading `, `). No dashboard change needed — it renders arbitrary strings.
+---
+
+## Sleep log — `sleep.txt`
+
+One line per night, written by the **Log Sleep** automation (date = wake date):
+
+```
+2026-06-23 | sleep | hrs=7.2 | awake=0.6 | bed=2026-06-22T23:10 | wake=2026-06-23T06:58
+```
+
+`hrs` = hours asleep (sum of asleep stages), `awake` = awake time during the night. `bed`/`wake` are optional (only needed for a future sleep-consistency metric). Apple's Sleep Score isn't exposed to Shortcuts, so the dashboard computes its own quality signal from these raw numbers.
+
+### Log Sleep — steps (this one is fully specified)
+1. **Date** (Current) → `Now`; **Adjust Date** −1 Day → `Yesterday`; **Format Date** `yyyyMMdd` → `YNum`; **Text** `[YNum]1800` → `CutNum` (6pm-yesterday cutoff as a comparable number).
+2. **Find Health Samples** → **Sleep**, filter *Start Date is in the last 2 Days*, sort *Start Date, Oldest First* → `SleepSamples`. (The Health date filter only takes a static "last N days", so the precise single-night cutoff is done in the loop.)
+3. **Number** `0` → Set `AsleepMin`; **Number** `0` → Set `AwakeMin`.
+4. **Repeat with Each** `SleepSamples`:
+   - **Get Details of Health Sample** → **Value** → `Stage`; → **Start Date** → `St`; → **End Date** → `En`.
+   - **Format Date** `St` as `yyyyMMddHHmm` → `StNum`.
+   - **If `StNum` is greater than `CutNum`** (i.e. last night):
+     - **Get Time Between** `St` and `En` (Minutes) → `Seg`.
+     - **If `Stage` contains `Awake`** → `AwakeMin + Seg`; **Otherwise If contains `Bed`** → skip; **Otherwise** → `AsleepMin + Seg`.
+5. `hrs` = `AsleepMin / 60` (1 dp); `awake` = `AwakeMin / 60` (1 dp).
+6. Build the `sleep` line and **append** to `sleep.txt`.
+7. **Automation** → Time of Day (a fixed morning time; that fixed time is what makes the "6pm yesterday" cutoff isolate one night).
+
+> Sleep-stage `Value` comes back as a bare stage name (`REM`, `Core`, `Deep`, `Awake`, `In Bed`), so the `contains Awake` / `contains Bed` / else logic counts the right segments.
+
+---
+
+## Alcohol — `drinkcontrol.csv`
+
+Not a shortcut: export from the DrinkControl app (`;`-delimited CSV). The dashboard uses `AccountedForDate` and the app's pre-computed `TotalUnits(UK)` column. Re-export and re-import periodically; the dashboard attaches each migraine's prior-7-day unit total.
