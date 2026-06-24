@@ -2,7 +2,7 @@
 
 The capture side is built in the iOS Shortcuts app (not in this repo). The Shortcuts append plain-text **event logs** to iCloud Drive; the dashboard reads them and joins them by date. **The log line formats below are the contract** — if you rebuild a shortcut, match the line format exactly and the dashboard keeps working.
 
-> Status note: the line formats here are verified against real exports. The per-shortcut *build steps* for the migraine and weather shortcuts are described at the approach level — the exact internal wiring (especially how the weather block and `sex` are obtained) lives on the phone. Correct anything that doesn't match how you actually built them.
+> Status note: the line formats here are verified against real exports. The migraine and weather build steps are at the approach level but confirmed by the user (weather via Get Current Weather → Get Details; `sex` pulled from Health). The Log Sleep steps are exact.
 
 ## Files (all in iCloud Drive)
 
@@ -54,8 +54,8 @@ The dashboard pairs the events into one episode, takes onset = `auraStart` time,
 ### Start Migraine (auraStart) — approach
 1. Current date → format `yyyy-MM-dd'T'HH:mm`.
 2. `cycle` from Health (days since last period start).
-3. `sex` — your 1/0 flag (e.g. a Yes/No menu → `1`/`0`).
-4. Weather block — Get Current Weather → Get Details for each metric (high, low, condition, pressure, humidity, wind, UV, air quality).
+3. `sex` from Health — **Find Health Samples → Sexual Activity**, *Start Date in the last 2 days*; `1` if any sample exists, else `0`.
+4. Weather block — **Get Current Weather → Get Details** for each metric (high, low, condition, pressure, humidity, wind, UV, air quality).
 5. (Optional) any symptoms you pick at onset.
 6. Build the `auraStart` line and **append** (recipe above).
 7. Optionally schedule the reminder that launches End.
